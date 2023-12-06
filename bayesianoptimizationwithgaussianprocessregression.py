@@ -26,7 +26,7 @@ def normalsample(X, noise_level=0.05):
         y = 0
         for jj in range(d):
             y += normalfunc(X[ii, jj], d)
-        # Add some random noise to the ground truth
+       
         y += np.random.normal(0, noise_level)
         Y.append(y)
     return Y
@@ -54,10 +54,12 @@ def optimize_with_gpr(X_init, y_init, n_iter=10, max_iter_factor=4):
     gp = None
     scaler = None  
 
+    bounds = [(0, 1)]  
+
     for _ in range(n_iter):
         gp, scaler = perform_gpr(X, y)
         acquisition_func = lambda x, gp=gp, scaler=scaler: -acquisition_function(x, gp, np.max(y), scaler=scaler)
-        result = minimize(acquisition_func, np.random.rand(1), method='L-BFGS-B', options={'maxiter': 10000})
+        result = minimize(acquisition_func, np.random.rand(1), method='L-BFGS-B', bounds=bounds, options={'maxiter': 10000})
         x_next = np.array([result.x[0]])
         y_next = normalsample(x_next)
         
