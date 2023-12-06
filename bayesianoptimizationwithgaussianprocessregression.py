@@ -17,7 +17,7 @@ def normalfunc(x, d, sig=1, mu=0.5):
     minNorm = rawterm1 * np.exp(minterm2)
     return ((rawNorm - minNorm) / (maxNorm - minNorm)) / d
 
-def normalsample(X):
+def normalsample(X, noise_level=0.05):
     if X.ndim == 1:
         X = X.reshape(-1, 1)
     n, d = X.shape
@@ -26,6 +26,8 @@ def normalsample(X):
         y = 0
         for jj in range(d):
             y += normalfunc(X[ii, jj], d)
+        # Add some random noise to the ground truth
+        y += np.random.normal(0, noise_level)
         Y.append(y)
     return Y
 
@@ -45,7 +47,6 @@ def acquisition_function(x, gp, y_opt, xi=0.01, scaler=None):
     mean, std = gp.predict(x_scaled, return_std=True)
     z = (mean - y_opt - xi) / std
     return (mean - y_opt - xi) * norm.cdf(z) + std * norm.pdf(z)
-
 
 def optimize_with_gpr(X_init, y_init, n_iter=10, max_iter_factor=4):
     X = X_init
@@ -80,10 +81,11 @@ y_init = normalsample(X_init)
 X_init = np.array([[0.1], [0.2], [0.3]])
 y_init = normalsample(X_init)
 
-optimized_X, optimized_y, gp, _ = optimize_with_gpr(X_init, y_init, n_iter=max_ter)
+optimized_X, optimized_y, gp, scaler = optimize_with_gpr(X_init, y_init, n_iter=max_ter)
 
 x_plot = np.linspace(0, 1, 1000)[:, np.newaxis]
-y_mean, _ = gp.predict(x_plot, return_std=True)
+x_plot_scaled = scaler.transform(x_plot)
+y_mean, _ = gp.predict(x_plot_scaled, return_std=True)
 
 plt.plot(x_plot, y_mean, 'r', lw=1, label='Bayesian Optimization Result', zorder=9)
 plt.scatter(optimized_X, optimized_y, c='r', s=50, label='Bayesian Optimization Samples', zorder=10, edgecolors=(0, 0, 0))
@@ -92,6 +94,7 @@ plt.title('Bayesian Optimization with Gaussian Process Regression')
 plt.legend()
 plt.show()
 
+# Surrogate function with inverse scaling
 def normalfunc_surrogate(x, d, sig=1, mu=0.5):
     rawterm1 = 1 / (sig * (2 * math.pi) ** 2)
     rawterm2 = -0.5 * ((x - mu) / sig) ** 2
@@ -103,25 +106,27 @@ def normalfunc_surrogate(x, d, sig=1, mu=0.5):
     y = ((rawNorm - minNorm) / (maxNorm - minNorm)) / d
     return y
 
-def normalsample_surrogate(X):
+def normalsample_surrogate_inverse_scaling(X, scaler):
     if X.ndim == 1:
         X = X.reshape(-1, 1)
     n, _ = X.shape
     Y = []
     for ii in range(n):
+        x_scaled = scaler.transform(np.array([X[ii]]).reshape(-1, 1))
         y = 0
         for jj in range(X.shape[1]):
-            y += normalfunc_surrogate(X[ii, jj], 1)
+            y += normalfunc_surrogate(x_scaled[0, jj], 1)
         Y.append(y)
     return Y
 
 X_surrogate = np.random.rand(5, 1)
-y_surrogate = normalsample_surrogate(X_surrogate)
+y_surrogate = normalsample_surrogate_inverse_scaling(X_surrogate, scaler)
 
 plt.figure(figsize=(12, 6))
 
 x_surrogate_plot = np.linspace(0, 1, 1000)[:, np.newaxis]
-y_surrogate_plot = normalsample_surrogate(x_surrogate_plot)
+x_surrogate_plot_scaled = scaler.transform(x_surrogate_plot)
+y_surrogate_plot = normalsample_surrogate_inverse_scaling(x_surrogate_plot_scaled, scaler)
 plt.plot(x_surrogate_plot, y_surrogate_plot, 'b', lw=1, label='Surrogate Function')
 
 plt.scatter(X_surrogate, y_surrogate, c='g', s=50, label='Surrogate Function Samples', edgecolors=(0, 0, 0))
