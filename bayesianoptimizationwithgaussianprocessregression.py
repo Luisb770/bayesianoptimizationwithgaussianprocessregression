@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel
 from scipy.optimize import minimize
 from scipy.stats import norm
 from sklearn.preprocessing import StandardScaler
@@ -34,10 +34,13 @@ def normalsample(X, noise_level=0.05):
 def objective_function(x):
     return -normalsample(np.array([x]))[0]
 
-def perform_gpr(X, y):
+def perform_gpr(X, y, noise_level=0.001):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    kernel = C(1.0, (1e-3, 1e3)) * RBF(1.0, (1e-2, 1e2))
+    
+    # Add a WhiteKernel for noise
+    kernel = C(1.0, (1e-3, 1e3)) * RBF(1.0, (1e-2, 1e2)) + WhiteKernel(noise_level, noise_level_bounds=(1e-5, 1e-3))
+    
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=50, optimizer='fmin_l_bfgs_b', random_state=0)
     gp.fit(X_scaled, y)
     return gp, scaler
@@ -140,4 +143,3 @@ plt.scatter(X_surrogate, y_surrogate, c='g', s=50, label='Surrogate Function Sam
 plt.title('Surrogate Function')
 plt.legend()
 plt.show()
-
