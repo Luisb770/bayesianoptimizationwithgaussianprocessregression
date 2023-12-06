@@ -89,7 +89,11 @@ x_plot = np.linspace(0, 1, 1000)[:, np.newaxis]
 x_plot_scaled = scaler.transform(x_plot)
 y_mean, _ = gp.predict(x_plot_scaled, return_std=True)
 
-plt.plot(x_plot, y_mean, 'r', lw=1, label='Bayesian Optimization Result', zorder=9)
+# Modified code to include inverse scaling for x_plot
+x_plot_original_scale = scaler.inverse_transform(x_plot_scaled)
+y_mean_original_scale, _ = gp.predict(x_plot_scaled, return_std=True)
+
+plt.plot(x_plot_original_scale, y_mean_original_scale, 'r', lw=1, label='Bayesian Optimization Result', zorder=9)
 plt.scatter(optimized_X, optimized_y, c='r', s=50, label='Bayesian Optimization Samples', zorder=10, edgecolors=(0, 0, 0))
 
 plt.title('Bayesian Optimization with Gaussian Process Regression')
@@ -136,3 +140,4 @@ plt.scatter(X_surrogate, y_surrogate, c='g', s=50, label='Surrogate Function Sam
 plt.title('Surrogate Function')
 plt.legend()
 plt.show()
+
